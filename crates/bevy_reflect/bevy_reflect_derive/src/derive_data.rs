@@ -136,7 +136,7 @@ impl<'a> ReflectDerive<'a> {
         #[cfg(feature = "documentation")]
         let mut doc = crate::documentation::Documentation::default();
 
-        for attribute in input.attrs.iter().filter_map(|attr| attr.parse_meta().ok()) {
+        for attribute in input.attrs.iter().filter_map(|attr| Some(attr.meta)) {
             match attribute {
                 Meta::List(meta_list) if meta_list.path.is_ident(REFLECT_ATTRIBUTE_NAME) => {
                     if !matches!(reflect_mode, None | Some(ReflectMode::Normal)) {
@@ -147,7 +147,7 @@ impl<'a> ReflectDerive<'a> {
                     }
 
                     reflect_mode = Some(ReflectMode::Normal);
-                    let new_traits = ReflectTraits::from_nested_metas(&meta_list.nested)?;
+                    let new_traits = ReflectTraits::from_nested_metas(&meta_list.path.segments)?;
                     traits = traits.merge(new_traits)?;
                 }
                 Meta::List(meta_list) if meta_list.path.is_ident(REFLECT_VALUE_ATTRIBUTE_NAME) => {
@@ -159,7 +159,7 @@ impl<'a> ReflectDerive<'a> {
                     }
 
                     reflect_mode = Some(ReflectMode::Value);
-                    let new_traits = ReflectTraits::from_nested_metas(&meta_list.nested)?;
+                    let new_traits = ReflectTraits::from_nested_metas(&meta_list.path.segments)?;
                     traits = traits.merge(new_traits)?;
                 }
                 Meta::Path(path) if path.is_ident(REFLECT_VALUE_ATTRIBUTE_NAME) => {

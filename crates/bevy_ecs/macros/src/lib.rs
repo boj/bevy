@@ -37,29 +37,28 @@ pub fn derive_bundle(input: TokenStream) -> TokenStream {
 
     let mut field_kind = Vec::with_capacity(named_fields.len());
 
-    'field_loop: for field in named_fields.iter() {
+    for field in named_fields.iter() {
         for attr in &field.attrs {
-            if attr.path.is_ident(BUNDLE_ATTRIBUTE_NAME) {
-                if let Ok(Meta::List(MetaList { nested, .. })) = attr.parse_meta() {
-                    if let Some(&NestedMeta::Meta(Meta::Path(ref path))) = nested.first() {
-                        if path.is_ident(BUNDLE_ATTRIBUTE_IGNORE_NAME) {
-                            field_kind.push(BundleFieldKind::Ignore);
-                            continue 'field_loop;
-                        }
-
-                        return syn::Error::new(
-                            path.span(),
-                            format!(
-                                "Invalid bundle attribute. Use `{BUNDLE_ATTRIBUTE_IGNORE_NAME}`"
-                            ),
-                        )
-                        .into_compile_error()
-                        .into();
+            if attr.path().is_ident(BUNDLE_ATTRIBUTE_NAME) {
+                let res = attr.parse_nested_meta(|meta| {
+                    if meta.path.is_ident(BUNDLE_ATTRIBUTE_IGNORE_NAME) {
+                        field_kind.push(BundleFieldKind::Ignore);
                     }
 
-                    return syn::Error::new(attr.span(), format!("Invalid bundle attribute. Use `#[{BUNDLE_ATTRIBUTE_NAME}({BUNDLE_ATTRIBUTE_IGNORE_NAME})]`")).into_compile_error().into();
-                }
+                    return Err(syn::Error::new(
+                        meta.path.span(),
+                        format!(
+                            "Invalid bundle attribute. Use `{BUNDLE_ATTRIBUTE_IGNORE_NAME}`"
+                        ),
+                    ))
+                });
+
+                match res {
+                    Ok(()) => continue,
+                    Err(e) => e.into_compile_error(),
+                };
             }
+            return syn::Error::new(attr.span(), format!("Invalid bundle attribute. Use `#[{BUNDLE_ATTRIBUTE_NAME}({BUNDLE_ATTRIBUTE_IGNORE_NAME})]`")).into_compile_error().into();
         }
 
         field_kind.push(BundleFieldKind::Component);

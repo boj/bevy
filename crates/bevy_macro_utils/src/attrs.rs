@@ -2,17 +2,13 @@ use syn::DeriveInput;
 
 use crate::symbol::Symbol;
 
-pub fn parse_attrs(ast: &DeriveInput, attr_name: Symbol) -> syn::Result<Vec<syn::NestedMeta>> {
+pub fn parse_attrs(ast: &DeriveInput, attr_name: Symbol) -> syn::Result<Vec<&syn::MetaList>> {
     let mut list = Vec::new();
-    for attr in ast.attrs.iter().filter(|a| a.path == attr_name) {
-        match attr.parse_meta()? {
-            syn::Meta::List(meta) => list.extend(meta.nested.into_iter()),
-            other => {
-                return Err(syn::Error::new_spanned(
-                    other,
-                    format!("expected #[{attr_name}(...)]"),
-                ))
-            }
+    for attr in ast.attrs.iter().filter(|a| a.path().is_ident(&attr_name.to_string())) {
+        let meta_res = attr.meta.require_list();
+        match meta_res {
+            Ok(meta_list) => list.push(meta_list),
+            _ => continue,
         }
     }
     Ok(list)

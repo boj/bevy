@@ -15,29 +15,29 @@ pub(crate) fn type_uuid_derive(input: proc_macro::TokenStream) -> proc_macro::To
     let type_ident = ast.ident;
 
     let mut uuid = None;
-    for attribute in ast.attrs.iter().filter_map(|attr| attr.parse_meta().ok()) {
-        let Meta::NameValue(name_value) = attribute else {
-            continue;
-        };
+    for attribute in ast.attrs.iter() {
+        if attribute.path().is_ident("uuid") {
+            let uuid_str = match attribute.meta.require_name_value() {
+                Ok(name_value) => {
+                    match &name_value.value {
+                        Expr::Lit(expr) => {
+                            match &expr.lit {
+                                Lit::Str(lit_str) => lit_str.value(),
+                                _ => panic!("`uuid` attribute must take the form `#[uuid = \"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\"`."),
+                            }
+                        }
+                        // TODO: What if it's not a lit?
+                        _ => continue,
+                    }
+                }
+                Err(_) => continue,
+            };
 
-        if name_value
-            .path
-            .get_ident()
-            .map(|i| i != "uuid")
-            .unwrap_or(true)
-        {
-            continue;
+            uuid = Some(
+                Uuid::parse_str(&uuid_str)
+                    .expect("Value specified to `#[uuid]` attribute is not a valid UUID."),
+                );
         }
-
-        let uuid_str = match name_value.lit {
-            Lit::Str(lit_str) => lit_str,
-            _ => panic!("`uuid` attribute must take the form `#[uuid = \"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\"`."),
-        };
-
-        uuid = Some(
-            Uuid::parse_str(&uuid_str.value())
-                .expect("Value specified to `#[uuid]` attribute is not a valid UUID."),
-        );
     }
 
     let uuid =

@@ -13,7 +13,7 @@ use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::token::Comma;
-use syn::{Meta, NestedMeta, Path};
+use syn::{Meta, Path};
 
 // The "special" trait idents that are used internally for reflection.
 // Received via attributes like `#[reflect(PartialEq, Hash, ...)]`
@@ -181,7 +181,7 @@ impl ReflectTraits {
                     // Track the span where the trait is implemented for future errors
                     let span = ident.span();
 
-                    let list_meta = list.nested.iter().next();
+                    let list_meta = list.path.segments.iter().next();
                     if let Some(NestedMeta::Meta(Meta::Path(path))) = list_meta {
                         // This should be the path of the custom function
                         let trait_func_ident = TraitImpl::Custom(path.clone(), span);
